@@ -30,7 +30,7 @@ Instalador automatizado para VPS com Docker, Portainer e aplicações.
 
 1. Clone o repositório no VPS:
 ```bash
-git clone https://github.com/seu-usuario/vps-installer.git
+git clone https://github.com/betomoraisbm/vps-installer.git
 cd vps-installer
 ```
 

@@ -281,6 +281,8 @@ install_portainer() {
     echo -e "========================================"
     echo ""
 
+    read -p "Digite o domínio para o Portainer (ex: portainer.seudominio.com): " PORTAINER_DOMAIN
+
     if docker ps -a --format '{{.Names}}' | grep -q "^portainer$"; then
         write_step "Portainer já existe!" "SKIP"
         read -p "Pressione ENTER para continuar"
@@ -304,8 +306,10 @@ install_portainer() {
         portainer/portainer-ce:latest
 
     write_step "Portainer instalado!" "OK"
-    echo "  URL: https://localhost:9443"
+    echo "  URL: https://${PORTAINER_DOMAIN}:9443"
     echo "  (ou http://localhost:9000)"
+    echo ""
+    echo "  Domínio: ${PORTAINER_DOMAIN}"
 
     read -p "Pressione ENTER para continuar"
 }
