@@ -380,12 +380,24 @@ configure_proxy_host() {
     write_step "Configurando Proxy Host no NPM..." "INFO"
 
     local email="admin@example.com"
-    local password="changeme"
+    local password="admin@2026"
     local npm_api="http://localhost:81"
+    local max_attempts=5
+    local attempt=1
 
-    local token=$(curl -s -X POST "$npm_api/api/tokens" \
-        -H "Content-Type: application/json" \
-        -d "{\"identity\":\"$email\",\"secret\":\"$password\"}" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+    write_step "Aguardando NPM ficar pronto..." "INFO"
+    while [ $attempt -le $max_attempts ]; do
+        local token=$(curl -s -X POST "$npm_api/api/tokens" \
+            -H "Content-Type: application/json" \
+            -d "{\"identity\":\"$email\",\"secret\":\"$password\"}" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+
+        if [ -n "$token" ]; then
+            break
+        fi
+        write_step "Tentativa $attempt/$max_attempts - aguardando..." "WARN"
+        sleep 5
+        attempt=$((attempt + 1))
+    done
 
     if [ -z "$token" ]; then
         write_step "Erro ao autenticar no NPM. Configure manualmente." "ERROR"
