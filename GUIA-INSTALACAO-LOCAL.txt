@@ -1,0 +1,104 @@
+========================================
+GUIA DE INSTALAÇÃO - LOCAL
+BETO MORAIS
+========================================
+
+OBJETIVO: Testar os scripts no seu PC/Windows antes de usar em produção.
+
+-----------------------------------------------------------
+1. PREPARAÇÃO
+-----------------------------------------------------------
+
+1.1. Copie a pasta VPSInstaller para o seu computador local
+
+1.2. Verifique se tem Docker Desktop instalado:
+     - Download: https://www.docker.com/products/docker-desktop
+     - OU use o script opção 1 para instalar
+
+-----------------------------------------------------------
+2. EXECUÇÃO DO SCRIPT
+-----------------------------------------------------------
+
+2.1. Abra o PowerShell
+
+2.2. Navegue até a pasta:
+     cd "C:\caminho\ate\VPSInstaller"
+
+2.3. Execute:
+     powershell -ExecutionPolicy Bypass -File .\install-docker-portainer.ps1
+
+-----------------------------------------------------------
+3. ORDEM DE INSTALAÇÃO (LOCAL)
+-----------------------------------------------------------
+
+Como é ambiente LOCAL (sem domínio), você NÃO precisa do Nginx Proxy Manager.
+
+ ordem sugerida:
+
+  1  - Docker (se não tiver)
+  2  - PostgreSQL
+  3  - Redis
+  4  - MinIO (opcional, só se usar Typebot)
+  6  - Portainer
+  7  - Typebot
+  8  - N8N
+  9  - Evolution API
+ 10  - Wuzapi
+ 11  - OpenClaw
+
+-----------------------------------------------------------
+4. ACESSO AOS APPS (LOCAL)
+-----------------------------------------------------------
+
+Depois de instalar, acesse no navegador:
+
+  Portainer:     http://localhost:9000
+  Typebot:       http://localhost:3000
+  N8N:           http://localhost:5678
+  Evolution API: http://localhost:8080
+  Wuzapi:        http://localhost:3001
+  OpenClaw:      http://localhost:3002
+  MinIO Console: http://localhost:9001
+
+-----------------------------------------------------------
+5. ACESSO AOS DADOS (LOCAL)
+-----------------------------------------------------------
+
+  PostgreSQL:
+    - Host: localhost
+    - Porta: 5432
+    - Senha: BetoM2025!?
+
+  Redis:
+    - Host: localhost
+    - Porta: 6379
+    - Senha: BetoR2025!?
+
+  MinIO:
+    - API: http://localhost:9000
+    - Console: http://localhost:9001
+    - Usuário: betominio
+    - Senha: BetoM2025!?
+
+-----------------------------------------------------------
+6. DIFERENÇAS DO LOCAL
+-----------------------------------------------------------
+
+- NÃO usa Nginx Proxy Manager
+- NÃO precisa de domínio
+- NÃO precisa de SSL/HTTPS
+- Apps acessados via localhost
+- Ideal para aprender e testar
+
+-----------------------------------------------------------
+7. LIMPEZA (OPCIONAL)
+-----------------------------------------------------------
+
+Para remover tudo e começar do zero:
+
+  docker stop $(docker ps -aq)
+  docker rm $(docker ps -aq)
+  docker volume rm $(docker volume ls -q)
+  docker network rm docker_beto
+
+========================================

@@ -1,0 +1,153 @@
+# GUIA DE INSTALAÇÃO - DOCKER & PORTAINER VPS
+===========================================
+BETO MORAIS
+===========================================
+
+PASSO A PASSO PARA INSTALAÇÃO
+-------------------------------------------
+
+1. PREPARAÇÃO DO AMBIENTE
+-------------------------------------------
+
+1.1. Permissão de Administrador
+- Clique com botão direito no PowerShell
+- Selecione "Executar como Administrador"
+
+1.2. Verificar Pré-requisitos
+- Windows 10/11 Pro ou Windows Server 2016+
+- No mínimo 4GB de RAM
+- 20GB de espaço em disco livre
+- Acesso à internet
+
+2. ORGANIZAÇÃO DOS ARQUIVOS
+-------------------------------------------
+
+Estrutura de pastas recomendada:
+
+C:\VPSInstaller\
+├── install-docker-portainer.ps1    (Script Principal - Execute este!)
+├── troca-dominio.ps1               (Troca de Domínio)
+├── config-portainer.ps1            (Configuração Portainer)
+└── verificacao-atualizacao.ps1     (Verificação e Atualização)
+
+COPIE TODOS OS 4 ARQUIVOS PARA A PASTA C:\VPSInstaller\
+
+3. EXECUÇÃO DA INSTALAÇÃO
+-------------------------------------------
+
+3.1. Execute o Script Principal
+-------------------------------------------
+1. Abra o PowerShell como Administrador
+2. Navegue até a pasta:
+   cd C:\VPSInstaller\
+
+3. Execute o script principal:
+   .\install-docker-portainer.ps1
+
+3.2. Menu Principal - Opções:
+-------------------------------------------
+   1 - Instalar Docker
+   2 - Instalar Docker Compose
+   3 - Instalar Portainer
+   4 - Instalar Nginx Reverse Proxy
+   5 - INSTALAR TUDO (Recomendado para iniciantes)
+   6 - Configurar/Alterar Domínio
+   7 - Verificar Status
+   8 - Iniciar Portainer
+   9 - Parar Portainer
+   10 - Reiniciar Portainer
+   11 - Remover instalação
+   0 - Sair
+
+3.3. Instalação Completa (Opção 5):
+-------------------------------------------
+Recomendado para quem está começando!
+
+O script irá:
+1. Instalar o Docker
+2. Instalar o Docker Compose
+3. Instalar o Portainer
+4. Pedir para configurar o domínio
+
+4. CONFIGURAÇÃO DO DOMÍNIO
+-------------------------------------------
+
+Após a instalação, ao executar o menu de domínio:
+
+1. Digite o domínio (ex: meusite.com)
+2. Digite o email para SSL (ex: admin@meusite.com)
+3. O sistema gerará automaticamente os certificados SSL
+
+5. ACESSO AOS SERVIÇOS
+-------------------------------------------
+
+Após instalação completa:
+
+- Portainer: http://localhost:9000
+- Na primeira vez, crie seu usuário admin
+
+6. HOSPEDAGEM DOS ARQUIVOS?
+-------------------------------------------
+
+NÃO PRECISA HOSPEDAR!
+
+Os scripts são executados LOCALMENTE no seu VPS/PC.
+
+Você NÃO precisa:
+- Hospedar em servidor web
+- Fazer upload para algum site
+- Ter um domínio para rodar localmente
+
+Você SÓ precisa:
+- Copiar os arquivos para o computador/VPS
+- Executar como Administrador
+- Seguir os passos do menu
+
+7. ONDE RODAR?
+-------------------------------------------
+
+Estes scripts podem ser executados em:
+
+1. VPS Windows (ex: Contabo, OVH, AWS, DigitalOcean)
+2. Computador Windows local
+3. Servidor Windows na sua empresa
+4. Qualquer máquina Windows com acesso administrativo
+
+8. APÓS A INSTALAÇÃO
+-------------------------------------------
+
+Ferramentas disponíveis:
+
+1. install-docker-portainer.ps1
+   → Menu principal para gerenciar tudo
+
+2. troca-dominio.ps1
+   → Alterar domínio quando precisar
+
+3. config-portainer.ps1
+   → Controlar o Portainer (iniciar/parar/backup)
+
+4. verificacao-atualizacao.ps1
+   → Verificar atualizações e status
+
+9. SOLUÇÃO DE PROBLEMAS
+-------------------------------------------
+
+Erro ao executar script?
+1. Verifique se abriu como Administrador
+2. Execute: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+3. Tente novamente
+
+Docker não instala?
+- Verifique se Hyper-V está habilitado
+- Reinicie o computador e tente novamente
+
+10. CONTATO DE SUPORTE
+-------------------------------------------
+
+BETO MORAIS
+Suporte em caso de dúvidas durante instalação
+
+===========================================
+FIM DO GUIA
+===========================================

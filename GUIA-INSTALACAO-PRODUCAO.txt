@@ -1,0 +1,235 @@
+========================================
+GUIA DE INSTALAÇÃO - PRODUÇÃO
+BETO MORAIS
+========================================
+
+OBJETIVO: Instalar ambiente completo em VPS com domínio e SSL.
+
+-----------------------------------------------------------
+1. ANTES DE COMEÇAR
+-----------------------------------------------------------
+
+1.1. VPS/Server necessário:
+     - Windows Server 2019/2022
+     - 4GB RAM mínimo (8GB recomendado)
+     - 50GB disco mínimo
+     - IP público fixo
+
+1.2. Domínio configurado:
+     - Você precisa de um domínio (ex: meusite.com)
+     - Configure os DNS do domínio apontando para seu VPS:
+       - Tipo A: @ -> IP_DO_VPS
+       - Tipo A: *.meusite.com -> IP_DO_VPS
+
+1.3. Portas abertas no VPS/Firewall:
+     - 80 (HTTP - Let's Encrypt)
+     - 443 (HTTPS - Let's Encrypt)
+     - 81 (Admin Nginx Proxy Manager)
+
+-----------------------------------------------------------
+2. PREPARAÇÃO
+-----------------------------------------------------------
+
+2.1. Copie a pasta VPSInstaller para o servidor
+
+2.2. Verifique se tem Docker:
+     docker --version
+
+     Se não tiver, use a opção 1 do script.
+
+2.3. Abra o PowerShell como Administrador
+
+-----------------------------------------------------------
+3. EXECUÇÃO DO SCRIPT
+-----------------------------------------------------------
+
+3.1. Navegue até a pasta:
+     cd "C:\caminho\ate\VPSInstaller"
+
+3.2. Execute:
+     powershell -ExecutionPolicy Bypass -File .\install-docker-portainer.ps1
+
+-----------------------------------------------------------
+4. ORDEM DE INSTALAÇÃO (PRODUÇÃO)
+-----------------------------------------------------------
+
+SIGA ESTA ORDEM EXATAMENTE:
+
+  ETAPA 1 - INFRAESTRUTURA BASE:
+  ─────────────────────────────
+  1  - Docker
+  2  - PostgreSQL
+  3  - Redis
+  4  - MinIO
+  5  - Nginx Proxy Manager
+  6  - Portainer
+
+  ETAPA 2 - APLICAÇÕES:
+  ───────────────────
+  7  - Typebot
+  8  - N8N
+  9  - Evolution API
+ 10  - Wuzapi
+ 11  - OpenClaw
+
+-----------------------------------------------------------
+5. CONFIGURAÇÃO DO DOMÍNIO
+-----------------------------------------------------------
+
+Quando o script perguntar o domínio, DIGITE o domínio completo:
+
+  Exemplo para Typebot: typebot.meusite.com
+  Exemplo para N8N: n8n.meusite.com
+  Exemplo para Evolution API: api.meusite.com
+
+O script salva essas informações para você configurar depois.
+
+-----------------------------------------------------------
+6. ACESSO AOS APPS
+-----------------------------------------------------------
+
+  APÓS configurar no Nginx Proxy Manager (próximo passo):
+
+  Portainer:     http://localhost:9000
+  Nginx Admin:   http://localhost:81
+
+  COM DOMÍNIO (exemplos):
+  Typebot:       https://typebot.meusite.com
+  N8N:           https://n8n.meusite.com
+  Evolution API: https://api.meusite.com
+  Wuzapi:        https://wuzapi.meusite.com
+  OpenClaw:      https://openclaw.meusite.com
+
+-----------------------------------------------------------
+7. NGINX PROXY MANAGER - CONFIGURAÇÃO SSL
+-----------------------------------------------------------
+
+7.1. Acesse: http://localhost:81
+
+7.2. Login padrão:
+     Email:    admin@example.com
+     Senha:    changeme
+
+7.3. Mude a senha no primeiro acesso!
+
+7.4. Para configurar um proxy host:
+
+     a) Clique em "Proxy Hosts" -> "Add Proxy Host"
+
+     b) Preencha:
+        Domain Names: typebot.meusite.com
+        Scheme: http
+        Forward Hostname: host.docker.internal
+        Forward Port: 3000
+
+     c) Aba "SSL":
+        - Selecione "Request a new SSL Certificate"
+        - Marque "Force SSL"
+        - Digite seu email
+        - Marque "I agree to the Let's Encrypt Terms of Service"
+
+     d) Save
+
+7.5. Repita para cada app que quiser expor com domínio.
+
+-----------------------------------------------------------
+8. DADOS DE ACESSO
+-----------------------------------------------------------
+
+  PostgreSQL:
+    - Host: postgres (dentro da rede Docker)
+    - Porta: 5432
+    - Database: beto
+    - Usuário: postgres
+    - Senha: BetoM2025!?
+
+  Redis:
+    - Host: redis
+    - Porta: 6379
+    - Senha: BetoR2025!?
+
+  MinIO:
+    - API: http://minio:9000
+    - Console: http://minio:9001
+    - Usuário: betominio
+    - Senha: BetoM2025!?
+
+  Nginx Proxy Manager:
+    - Admin: http://localhost:81
+    - Email: admin@example.com (mude!)
+    - Senha: changeme (mude!)
+
+  Portainer:
+    - URL: http://localhost:9000
+
+-----------------------------------------------------------
+9. ARQUITETURA DA REDE
+-----------------------------------------------------------
+
+Todos os containers usam a rede: docker_beto
+
+Isso permite a comunicação entre containers pelo nome:
+  - postgres -> PostgreSQL
+  - redis -> Redis
+  - minio -> MinIO
+  - typebot -> Typebot
+  - n8n -> N8N
+  - etc.
+
+-----------------------------------------------------------
+10. COMANDOS ÚTEIS
+-----------------------------------------------------------
+
+Ver status dos containers:
+  docker ps
+
+Ver logs de um container:
+  docker logs nome_do_container
+
+Exemplos:
+  docker logs portainer
+  docker logs typebot
+  docker logs n8n
+
+Restartar um container:
+  docker restart nome_do_container
+
+Parar um container:
+  docker stop nome_do_container
+
+Acessar shell do container:
+  docker exec -it nome_do_container sh
+
+-----------------------------------------------------------
+11. BACKUP RECOMENDADO
+-----------------------------------------------------------
+
+Faça backup dos volumes Docker periodicamente:
+
+  PostgreSQL:
+    docker run --rm -v postgres_data:/data -v .\backup:/backup alpine tar czf /backup/postgres.tar.gz /data
+
+  Portainer:
+    docker stop portainer
+    docker run --rm -v portainer_data:/data -v .\backup:/backup alpine tar czf /backup/portainer.tar.gz /data
+    docker start portainer
+
+-----------------------------------------------------------
+12. RESOLUÇÃO DE PROBLEMAS
+-----------------------------------------------------------
+
+Problema: Container não inicia
+  docker logs nome_do_container
+  docker inspect nome_do_container
+
+Problema: Não consigo acessar de fora
+  - Verifique se as portas 80 e 443 estão abertas
+  - Verifique o firewall do Windows
+  - Verifique as regras do Nginx Proxy Manager
+
+Problema: SSL não funciona
+  - Verifique se o domínio está apontando para o IP correto
+  - Use https://decoder.link/ssl_check para verificar
+  - O DNS pode demorar até 48h para propagar
+
+========================================
