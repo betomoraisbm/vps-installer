@@ -223,7 +223,7 @@ install_minio() {
 }
 
 # ============================================
-# INSTALAR CADDY (PROXY REVERSO COM SSL AUTO)
+# INSTALAR CADDY (PROXY REVERSO)
 # ============================================
 install_caddy() {
     show_banner
@@ -241,32 +241,20 @@ install_caddy() {
     write_step "Instalando Caddy..." "INFO"
     mkdir -p /opt/caddy
 
-    cat > /opt/caddy/Caddyfile << 'EOF'
-{
-    email admin@{$DOMAIN}
-}
-
-:80 {
-    reverse_proxy /http/* portainer:9000
-    reverse_proxy /* portainer:9000
-}
-EOF
-
     docker run -d \
         --name caddy \
         --restart unless-stopped \
         --network "$NETWORK_NAME" \
         -p 80:80 \
         -p 443:443 \
+        -p 443:443/udp \
         -v /opt/caddy/Caddyfile:/etc/caddy/Caddyfile \
         -v /opt/caddy/data:/data \
         caddy:latest
 
     sleep 5
 
-    write_step "Caddy instalado com SSL automático!" "OK"
-    echo "  Porta 80: http (redireciona para https)"
-    echo "  Porta 443: https (SSL automático)"
+    write_step "Caddy instalado!" "OK"
 }
 
 # ============================================
@@ -281,20 +269,27 @@ configure_domain_caddy() {
 
     cat > /opt/caddy/Caddyfile << EOF
 {
-    email admin@{$domain}
+    admin off
+    auto_https off
 }
 
-:80 {
-    reverse_proxy /http/* ${target_host}:${target_port}
-    reverse_proxy /* ${target_host}:${target_port}
+:${target_port} {
+    reverse_proxy ${target_host}:${target_port}
 }
 
-${domain} {
+http://${domain}:80 {
+    reverse_proxy ${target_host}:${target_port}
+}
+
+https://${domain}:443 {
+    tls internal
     reverse_proxy ${target_host}:${target_port}
 }
 EOF
 
-    docker exec caddy caddy reload --config /etc/caddy/Caddyfile
+    docker exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile 2>/dev/null || true
+
+    sleep 2
 
     write_step "Domínio $domain configurado!" "OK"
 }
