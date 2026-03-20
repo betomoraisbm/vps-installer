@@ -305,7 +305,7 @@ install_nginx_pm() {
 
     write_step "Alterando senha do admin..." "INFO"
     local npm_api="http://localhost:81"
-    local new_password="BetoMorais@2026"
+    local new_password="admin@2026"
 
     local token=$(curl -s -X POST "$npm_api/api/tokens" \
         -H "Content-Type: application/json" \
