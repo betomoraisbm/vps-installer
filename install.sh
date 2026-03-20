@@ -339,12 +339,12 @@ install_portainer() {
 
     sleep 5
 
-    configure_proxy_host "$PORTAINER_DOMAIN" "portainer" "9000"
-
     write_step "Portainer instalado!" "OK"
-    echo "  URL: https://$PORTAINER_DOMAIN"
+    echo "  URL: http://localhost:9000"
     echo "  Login: admin"
     echo "  Senha: admin@2026"
+    echo ""
+    echo -e "${YELLOW}NOTA: Configure o Proxy Host no NPM manualmente (veja instruções abaixo)${NC}"
 }
 
 # ============================================
@@ -638,6 +638,27 @@ install_all() {
     echo -e "${CYAN}========================================${NC}"
     echo -e "${GREEN}INSTALAÇÃO CONCLUÍDA!${NC}"
     echo -e "${CYAN}========================================${NC}"
+    echo ""
+    echo -e "${YELLOW}========================================${NC}"
+    echo -e "${YELLOW}   CONFIGURAR PROXY HOST NO NPM${NC}"
+    echo -e "${YELLOW}========================================${NC}"
+    echo ""
+    echo -e "PASSO 1: Acesse o Nginx Proxy Manager:"
+    echo -e "  URL: http://SEU_IP:81"
+    echo -e "  Login: admin@example.com"
+    echo -e "  Senha: changeme"
+    echo ""
+    echo -e "PASSO 2: Na primeira vez, configure sua conta NPM"
+    echo ""
+    echo -e "PASSO 3: Vá em Proxy Hosts > Add Proxy Host"
+    echo ""
+    echo -e "PASSO 4: Preencha:"
+    echo -e "  Domain Names: $PORTAINER_DOMAIN"
+    echo -e "  Forward Hostname / IP: portainer"
+    echo -e "  Forward Port: 9000"
+    echo -e "  Enable SSL: YES (depois)"
+    echo ""
+    echo -e "${YELLOW}========================================${NC}"
     echo ""
     read -p "Pressione ENTER para ver o menu..."
 }
