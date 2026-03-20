@@ -67,6 +67,45 @@ create_network() {
 }
 
 # ============================================
+# INSTALAR TUDO
+# ============================================
+install_all() {
+    show_banner
+    echo -e "${CYAN}[INSTALAR TUDO]${NC}"
+    echo -e "========================================"
+    echo ""
+    echo -e "Este processo vai instalar:"
+    echo -e "  - Docker"
+    echo -e "  - Portainer"
+    echo -e "  - Nginx Proxy Manager"
+    echo -e "  - PostgreSQL"
+    echo -e "  - Redis"
+    echo -e "  - MinIO"
+    echo ""
+    read -p "Pressione ENTER para continuar ou Ctrl+C para cancelar"
+
+    install_docker
+    create_network
+    install_postgres
+    install_redis
+    install_minio
+    install_nginx_pm
+    install_portainer
+
+    show_banner
+    echo -e "${CYAN}[INSTALAÇÃO COMPLETA]${NC}"
+    echo -e "========================================"
+    echo ""
+    echo -e "${GREEN}Tudo instalado com sucesso!${NC}"
+    echo ""
+    echo -e "Próximos passos:"
+    echo -e "  1. Configure o Nginx Proxy Manager em: http://IP:81"
+    echo -e "  2. Crie os Proxy Hosts para seus apps"
+    echo ""
+    read -p "Pressione ENTER para continuar"
+}
+
+# ============================================
 # INSTALAR DOCKER
 # ============================================
 install_docker() {
@@ -635,23 +674,26 @@ show_menu() {
     echo -e "${CYAN}[MENU PRINCIPAL]${NC}"
     echo -e "========================================"
     echo ""
+    echo -e "--- INSTALAÇÃO COMPLETA ---"
+    echo -e "1. INSTALAR TUDO (Docker + Portainer + NPM + PostgreSQL + Redis + MinIO)"
+    echo ""
     echo -e "--- INFRAESTRUTURA ---"
-    echo -e "1. Instalar Docker"
-    echo -e "2. Instalar PostgreSQL"
-    echo -e "3. Instalar Redis"
-    echo -e "4. Instalar MinIO"
-    echo -e "5. Instalar Nginx Proxy Manager"
-    echo -e "6. Instalar Portainer"
+    echo -e "2. Instalar Docker"
+    echo -e "3. Instalar PostgreSQL"
+    echo -e "4. Instalar Redis"
+    echo -e "5. Instalar MinIO"
+    echo -e "6. Instalar Nginx Proxy Manager"
+    echo -e "7. Instalar Portainer"
     echo ""
     echo -e "--- APLICAÇÕES ---"
-    echo -e "7. Instalar Typebot"
-    echo -e "8. Instalar N8N"
-    echo -e "9. Instalar Evolution API"
-    echo -e "10. Instalar Wuzapi"
-    echo -e "11. Instalar OpenClaw"
+    echo -e "8. Instalar Typebot"
+    echo -e "9. Instalar N8N"
+    echo -e "10. Instalar Evolution API"
+    echo -e "11. Instalar Wuzapi"
+    echo -e "12. Instalar OpenClaw"
     echo ""
     echo -e "--- UTILIDADES ---"
-    echo -e "12. Ver Status dos Serviços"
+    echo -e "13. Ver Status dos Serviços"
     echo ""
     echo -e "0. Sair"
     echo ""
@@ -667,18 +709,19 @@ main() {
         read -r choice
 
         case "$choice" in
-            1) install_docker ;;
-            2) install_postgres ;;
-            3) install_redis ;;
-            4) install_minio ;;
-            5) install_nginx_pm ;;
-            6) install_portainer ;;
-            7) install_typebot ;;
-            8) install_n8n ;;
-            9) install_evolution_api ;;
-            10) install_wuzapi ;;
-            11) install_openclaw ;;
-            12) show_status ;;
+            1) install_all ;;
+            2) install_docker ;;
+            3) install_postgres ;;
+            4) install_redis ;;
+            5) install_minio ;;
+            6) install_nginx_pm ;;
+            7) install_portainer ;;
+            8) install_typebot ;;
+            9) install_n8n ;;
+            10) install_evolution_api ;;
+            11) install_wuzapi ;;
+            12) install_openclaw ;;
+            13) show_status ;;
             0)
                 show_banner
                 echo -e "${CYAN}Obrigado!${NC}"
