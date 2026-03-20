@@ -251,16 +251,16 @@ install_minio() {
         --name minio \
         --restart unless-stopped \
         --network "$NETWORK_NAME" \
-        -p 9000:9000 \
-        -p 9001:9001 \
+        -p 9002:9000 \
+        -p 9003:9001 \
         -e MINIO_ROOT_USER="$MINIO_USER" \
         -e MINIO_ROOT_PASSWORD="$MINIO_PASSWORD" \
         -v minio_data:/data \
         minio/minio:latest server /data --console-address ":9001"
 
     write_step "MinIO instalado!" "OK"
-    echo "  API: http://localhost:9000"
-    echo "  Console: http://localhost:9001"
+    echo "  API: http://localhost:9002"
+    echo "  Console: http://localhost:9003"
     echo "  Usuário: $MINIO_USER"
     echo "  Senha: $MINIO_PASSWORD"
 
@@ -303,10 +303,28 @@ install_nginx_pm() {
     write_step "Aguardando Nginx Proxy Manager iniciar..." "INFO"
     sleep 10
 
+    write_step "Alterando senha do admin..." "INFO"
+    local npm_api="http://localhost:81"
+    local new_password="BetoMorais@2026"
+
+    local token=$(curl -s -X POST "$npm_api/api/tokens" \
+        -H "Content-Type: application/json" \
+        -d '{"identity":"admin@example.com","secret":"changeme"}' | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+
+    if [ -n "$token" ]; then
+        curl -s -X PUT "$npm_api/api/users/1" \
+            -H "Authorization: Bearer $token" \
+            -H "Content-Type: application/json" \
+            -d "{\"name\":\"Admin\",\"email\":\"admin@example.com\",\"password\":\"$new_password\"}" > /dev/null
+        write_step "Senha alterada com sucesso!" "OK"
+    else
+        write_step "Não foi possível alterar senha automaticamente." "WARN"
+    fi
+
     write_step "Nginx Proxy Manager instalado!" "OK"
     echo "  Admin UI: http://localhost:81"
     echo "  Email: admin@example.com"
-    echo "  Senha: changeme"
+    echo "  Senha: $new_password"
 
     read -p "Pressione ENTER para continuar"
 }
