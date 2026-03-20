@@ -316,8 +316,10 @@ install_portainer() {
 
     create_network
 
-    echo -e "Digite o domínio para o Portainer (ex: portainer.seudominio.com):"
-    read -p "Domínio: " PORTAINER_DOMAIN
+    if [ -z "$PORTAINER_DOMAIN" ]; then
+        echo -e "Digite o domínio para o Portainer (ex: portainer.seudominio.com):"
+        read -p "Domínio: " PORTAINER_DOMAIN
+    fi
 
     write_step "Criando volume para Portainer..." "INFO"
     docker volume create portainer_data &>/dev/null || true
@@ -359,8 +361,10 @@ install_typebot() {
 
     create_network
 
-    echo -e "Digite o domínio para o Typebot (ex: typebot.seudominio.com):"
-    read -p "Domínio: " TYPEBOT_DOMAIN
+    if [ -z "$TYPEBOT_DOMAIN" ]; then
+        echo -e "Digite o domínio para o Typebot (ex: typebot.seudominio.com):"
+        read -p "Domínio: " TYPEBOT_DOMAIN
+    fi
 
     write_step "Criando volume para Typebot..." "INFO"
     docker volume create typebot_data &>/dev/null || true
@@ -402,8 +406,10 @@ install_n8n() {
 
     create_network
 
-    echo -e "Digite o domínio para o N8N (ex: n8n.seudominio.com):"
-    read -p "Domínio: " N8N_DOMAIN
+    if [ -z "$N8N_DOMAIN" ]; then
+        echo -e "Digite o domínio para o N8N (ex: n8n.seudominio.com):"
+        read -p "Domínio: " N8N_DOMAIN
+    fi
 
     write_step "Criando volume para N8N..." "INFO"
     docker volume create n8n_data &>/dev/null || true
@@ -449,8 +455,10 @@ install_evolution() {
 
     create_network
 
-    echo -e "Digite o domínio para o Evolution API (ex: api.seudominio.com):"
-    read -p "Domínio: " EVOLUTION_DOMAIN
+    if [ -z "$EVOLUTION_DOMAIN" ]; then
+        echo -e "Digite o domínio para o Evolution API (ex: api.seudominio.com):"
+        read -p "Domínio: " EVOLUTION_DOMAIN
+    fi
 
     write_step "Criando volume para Evolution..." "INFO"
     docker volume create evolution_data &>/dev/null || true
@@ -489,8 +497,10 @@ install_wuzapi() {
 
     create_network
 
-    echo -e "Digite o domínio para o Wuzapi (ex: wuzapi.seudominio.com):"
-    read -p "Domínio: " WUZAPI_DOMAIN
+    if [ -z "$WUZAPI_DOMAIN" ]; then
+        echo -e "Digite o domínio para o Wuzapi (ex: wuzapi.seudominio.com):"
+        read -p "Domínio: " WUZAPI_DOMAIN
+    fi
 
     write_step "Criando volume para Wuzapi..." "INFO"
     docker volume create wuzapi_data &>/dev/null || true
@@ -531,8 +541,10 @@ install_openclaw() {
 
     create_network
 
-    echo -e "Digite o domínio para o OpenClaw (ex: openclaw.seudominio.com):"
-    read -p "Domínio: " OPENCLAW_DOMAIN
+    if [ -z "$OPENCLAW_DOMAIN" ]; then
+        echo -e "Digite o domínio para o OpenClaw (ex: openclaw.seudominio.com):"
+        read -p "Domínio: " OPENCLAW_DOMAIN
+    fi
 
     write_step "Criando volume para OpenClaw..." "INFO"
     docker volume create openclaw_data &>/dev/null || true
