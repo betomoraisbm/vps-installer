@@ -345,12 +345,52 @@ install_portainer() {
         portainer/portainer-ce:latest
 
     write_step "Portainer instalado!" "OK"
-    echo "  URL: https://${PORTAINER_DOMAIN}:9443"
-    echo "  (ou http://localhost:9000)"
+    echo "  URL: https://${PORTAINER_DOMAIN}"
     echo ""
     echo "  Domínio: ${PORTAINER_DOMAIN}"
 
+    configure_proxy_host "$PORTAINER_DOMAIN" "portainer" "9000"
+
     read -p "Pressione ENTER para continuar"
+}
+
+configure_proxy_host() {
+    local domain=$1
+    local target_host=$2
+    local target_port=$3
+
+    write_step "Configurando Proxy Host no NPM..." "INFO"
+
+    local email="admin@example.com"
+    local password="changeme"
+    local npm_api="http://localhost:81"
+
+    local token=$(curl -s -X POST "$npm_api/api/tokens" \
+        -H "Content-Type: application/json" \
+        -d "{\"identity\":\"$email\",\"secret\":\"$password\"}" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+
+    if [ -z "$token" ]; then
+        write_step "Erro ao autenticar no NPM. Configure manualmente." "ERROR"
+        return 1
+    fi
+
+    local result=$(curl -s -X POST "$npm_api/api/proxy-hosts" \
+        -H "Authorization: Bearer $token" \
+        -H "Content-Type: application/json" \
+        -d "{
+            \"domain_names\": [\"$domain\"],
+            \"forward_host\": \"$target_host\",
+            \"forward_port\": $target_port,
+            \"ssl_enabled\": true,
+            \"ssl_forced\": true,
+            \"allow_websocket\": true
+        }")
+
+    if echo "$result" | grep -q "id"; then
+        write_step "Proxy Host configurado com sucesso!" "OK"
+    else
+        write_step "Proxy Host pode já existir ou houve erro. Continue manualmente." "WARN"
+    fi
 }
 
 # ============================================
