@@ -265,32 +265,16 @@ configure_domain_caddy() {
     local target_host=$2
     local target_port=$3
 
-    write_step "Configurando $domain no Caddy..." "INFO"
+    write_step "Configurando $domain..." "INFO"
 
     cat > /opt/caddy/Caddyfile << EOF
-{
-    admin off
-    auto_https off
-}
-
-:${target_port} {
-    reverse_proxy ${target_host}:${target_port}
-}
-
-http://${domain}:80 {
-    reverse_proxy ${target_host}:${target_port}
-}
-
-https://${domain}:443 {
-    tls internal
+:80 {
     reverse_proxy ${target_host}:${target_port}
 }
 EOF
 
     docker exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile 2>/dev/null || true
-
     sleep 2
-
     write_step "Domínio $domain configurado!" "OK"
 }
 
