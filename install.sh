@@ -56,7 +56,7 @@ show_menu() {
     show_banner
     echo -e "${CYAN}[MENU PRINCIPAL]${NC}"
     echo -e "========================================"
-    echo -e "1 - INSTALAR TUDO (Docker + Portainer + NPM + PG + Redis + MinIO)"
+    echo -e "1 - INSTALAR TUDO (Docker + Portainer + Caddy + PG + Redis + MinIO)"
     echo -e "2 - Instalar Docker"
     echo -e "3 - Instalar PostgreSQL"
     echo -e "4 - Instalar Redis"
@@ -223,83 +223,80 @@ install_minio() {
 }
 
 # ============================================
-# INSTALAR NGINX PROXY MANAGER
+# INSTALAR CADDY (PROXY REVERSO COM SSL AUTO)
 # ============================================
-install_npm() {
+install_caddy() {
     show_banner
-    echo -e "${CYAN}[NGINX PROXY MANAGER]${NC}"
+    echo -e "${CYAN}[CADDY]${NC}"
     echo -e "========================================"
     echo ""
 
-    if docker ps -a --format '{{.Names}}' | grep -q "^npm$"; then
-        write_step "NPM já existe!" "SKIP"
+    if docker ps -a --format '{{.Names}}' | grep -q "^caddy$"; then
+        write_step "Caddy já existe!" "SKIP"
         return
     fi
 
     create_network
 
-    write_step "Criando volume para NPM..." "INFO"
-    docker volume create npm_data &>/dev/null || true
+    write_step "Instalando Caddy..." "INFO"
+    mkdir -p /opt/caddy
 
-    write_step "Instalando Nginx Proxy Manager..." "INFO"
+    cat > /opt/caddy/Caddyfile << 'EOF'
+{
+    email admin@{$DOMAIN}
+}
+
+:80 {
+    reverse_proxy /http/* portainer:9000
+    reverse_proxy /* portainer:9000
+}
+EOF
+
     docker run -d \
-        --name npm \
+        --name caddy \
         --restart unless-stopped \
         --network "$NETWORK_NAME" \
         -p 80:80 \
         -p 443:443 \
-        -p 81:81 \
-        -p 444:444 \
-        -v npm_data:/data \
-        -v npm_letsencrypt:/etc/letsencrypt \
-        jc21/nginx-proxy-manager:latest
+        -v /opt/caddy/Caddyfile:/etc/caddy/Caddyfile \
+        -v /opt/caddy/data:/data \
+        caddy:latest
 
-    write_step "Aguardando NPM iniciar..." "INFO"
-    sleep 10
+    sleep 5
 
-    write_step "Nginx Proxy Manager instalado!" "OK"
-    echo "  URL: http://localhost:81"
-    echo "  Login: admin@example.com"
-    echo "  Senha: changeme"
+    write_step "Caddy instalado com SSL automático!" "OK"
+    echo "  Porta 80: http (redireciona para https)"
+    echo "  Porta 443: https (SSL automático)"
 }
 
 # ============================================
-# CONFIGURAR PROXY HOST NO NPM
+# CONFIGURAR DOMÍNIO NO CADDY
 # ============================================
-configure_proxy_host() {
+configure_domain_caddy() {
     local domain=$1
     local target_host=$2
     local target_port=$3
-    local max_attempts=5
-    local attempt=1
 
-    write_step "Configurando Proxy Host no NPM..." "INFO"
+    write_step "Configurando $domain no Caddy..." "INFO"
 
-    local email="admin@example.com"
-    local password="changeme"
-    local npm_api="http://localhost:81"
+    cat > /opt/caddy/Caddyfile << EOF
+{
+    email admin@{$domain}
+}
 
-    while [ $attempt -le $max_attempts ]; do
-        local token=$(curl -s -X POST "$npm_api/api/tokens" \
-            -H "Content-Type: application/json" \
-            -d "{\"identity\":\"$email\",\"secret\":\"$password\"}" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+:80 {
+    reverse_proxy /http/* ${target_host}:${target_port}
+    reverse_proxy /* ${target_host}:${target_port}
+}
 
-        if [ -n "$token" ]; then
-            curl -s -X POST "$npm_api/api/proxy-hosts" \
-                -H "Content-Type: application/json" \
-                -H "Authorization: Bearer $token" \
-                -d "{\"domain_names\":[\"$domain\"],\"forward_scheme\":\"http\",\"forward_host\":\"$target_host\",\"forward_port\":$target_port,\"ssl_enabled\":false,\"enabled\":true}"
+${domain} {
+    reverse_proxy ${target_host}:${target_port}
+}
+EOF
 
-            write_step "Proxy Host criado: $domain -> $target_host:$target_port" "OK"
-            return
-        fi
+    docker exec caddy caddy reload --config /etc/caddy/Caddyfile
 
-        write_step "Tentativa $attempt/$max_attempts - aguardando NPM..." "WARN"
-        sleep 5
-        attempt=$((attempt + 1))
-    done
-
-    write_step "Não foi possível configurar Proxy Host automaticamente" "ERROR"
+    write_step "Domínio $domain configurado!" "OK"
 }
 
 # ============================================
@@ -343,8 +340,6 @@ install_portainer() {
     echo "  URL: http://localhost:9000"
     echo "  Login: admin"
     echo "  Senha: admin@2026"
-    echo ""
-    echo -e "${YELLOW}NOTA: Configure o Proxy Host no NPM manualmente (veja instruções abaixo)${NC}"
 }
 
 # ============================================
@@ -385,7 +380,7 @@ install_typebot() {
 
     sleep 5
 
-    configure_proxy_host "$TYPEBOT_DOMAIN" "typebot" "3000"
+    configure_domain_caddy "$TYPEBOT_DOMAIN" "typebot" "3000"
 
     write_step "Typebot instalado!" "OK"
     echo "  URL: https://$TYPEBOT_DOMAIN"
@@ -434,7 +429,7 @@ install_n8n() {
 
     sleep 5
 
-    configure_proxy_host "$N8N_DOMAIN" "n8n" "5678"
+    configure_domain_caddy "$N8N_DOMAIN" "n8n" "5678"
 
     write_step "N8N instalado!" "OK"
     echo "  URL: https://$N8N_DOMAIN"
@@ -476,7 +471,7 @@ install_evolution() {
 
     sleep 5
 
-    configure_proxy_host "$EVOLUTION_DOMAIN" "evolution" "8080"
+    configure_domain_caddy "$EVOLUTION_DOMAIN" "evolution" "8080"
 
     write_step "Evolution API instalado!" "OK"
     echo "  URL: https://$EVOLUTION_DOMAIN"
@@ -520,7 +515,7 @@ install_wuzapi() {
 
     sleep 5
 
-    configure_proxy_host "$WUZAPI_DOMAIN" "wuzapi" "3000"
+    configure_domain_caddy "$WUZAPI_DOMAIN" "wuzapi" "3000"
 
     write_step "Wuzapi instalado!" "OK"
     echo "  URL: https://$WUZAPI_DOMAIN"
@@ -564,7 +559,7 @@ install_openclaw() {
 
     sleep 5
 
-    configure_proxy_host "$OPENCLAW_DOMAIN" "openclaw" "3000"
+    configure_domain_caddy "$OPENCLAW_DOMAIN" "openclaw" "3000"
 
     write_step "OpenClaw instalado!" "OK"
     echo "  URL: https://$OPENCLAW_DOMAIN"
@@ -580,7 +575,7 @@ show_status() {
     echo -e "========================================"
     echo ""
 
-    docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "^(CONTAINER|postgres|redis|minio|npm|portainer|typebot|n8n|evolution|wuzapi|openclaw)" || echo "Nenhum container encontrado"
+    docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "^(CONTAINER|postgres|redis|minio|caddy|portainer|typebot|n8n|evolution|wuzapi|openclaw)" || echo "Nenhum container encontrado"
 }
 
 # ============================================
@@ -600,8 +595,11 @@ install_all() {
     install_postgres
     install_redis
     install_minio
-    install_npm
+    install_caddy
     install_portainer
+
+    sleep 3
+    configure_domain_caddy "$PORTAINER_DOMAIN" "portainer" "9000"
 
     echo ""
     echo -e "${CYAN}========================================${NC}"
@@ -625,10 +623,8 @@ install_all() {
     echo -e "  Usuário: $MINIO_USER"
     echo -e "  Senha: $MINIO_PASSWORD"
     echo ""
-    echo -e "${YELLOW}Nginx Proxy Manager:${NC}"
-    echo -e "  URL: http://localhost:81"
-    echo -e "  Login: admin@example.com"
-    echo -e "  Senha: changeme"
+    echo -e "${YELLOW}Caddy (SSL Automático):${NC}"
+    echo -e "  Proxy: $PORTAINER_DOMAIN -> portainer:9000"
     echo ""
     echo -e "${YELLOW}Portainer:${NC}"
     echo -e "  URL: https://$PORTAINER_DOMAIN"
@@ -638,25 +634,6 @@ install_all() {
     echo -e "${CYAN}========================================${NC}"
     echo -e "${GREEN}INSTALAÇÃO CONCLUÍDA!${NC}"
     echo -e "${CYAN}========================================${NC}"
-    echo ""
-    echo -e "${YELLOW}========================================${NC}"
-    echo -e "${YELLOW}   CONFIGURAR PROXY HOST NO NPM${NC}"
-    echo -e "${YELLOW}========================================${NC}"
-    echo ""
-    echo -e "PASSO 1: Acesse o Nginx Proxy Manager:"
-    echo -e "  URL: http://SEU_IP:81"
-    echo -e "  Login: admin@example.com"
-    echo -e "  Senha: changeme"
-    echo ""
-    echo -e "PASSO 2: Na primeira vez, configure sua conta NPM"
-    echo ""
-    echo -e "PASSO 3: Vá em Proxy Hosts > Add Proxy Host"
-    echo ""
-    echo -e "PASSO 4: Preencha:"
-    echo -e "  Domain Names: $PORTAINER_DOMAIN"
-    echo -e "  Forward Hostname / IP: portainer"
-    echo -e "  Forward Port: 9000"
-    echo -e "  Enable SSL: YES (depois)"
     echo ""
     echo -e "${YELLOW}========================================${NC}"
     echo ""
@@ -675,7 +652,7 @@ while true; do
         3) install_postgres ;;
         4) install_redis ;;
         5) install_minio ;;
-        6) install_npm ;;
+        6) install_caddy ;;
         7) install_portainer ;;
         8) install_typebot ;;
         9) install_n8n ;;
