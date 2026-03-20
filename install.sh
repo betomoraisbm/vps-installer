@@ -294,11 +294,6 @@ install_portainer() {
 
     create_network
 
-    if [ -z "$PORTAINER_DOMAIN" ]; then
-        echo -e "Digite o domínio para o Portainer (ex: portainer.seudominio.com):"
-        read -p "Domínio: " PORTAINER_DOMAIN
-    fi
-
     write_step "Criando volume para Portainer..." "INFO"
     docker volume create portainer_data &>/dev/null || true
 
@@ -574,11 +569,7 @@ install_all() {
     install_postgres
     install_redis
     install_minio
-    install_caddy
     install_portainer
-
-    sleep 3
-    configure_domain_caddy "$PORTAINER_DOMAIN" "portainer" "9000"
 
     echo ""
     echo -e "${CYAN}========================================${NC}"
@@ -602,11 +593,8 @@ install_all() {
     echo -e "  Usuário: $MINIO_USER"
     echo -e "  Senha: $MINIO_PASSWORD"
     echo ""
-    echo -e "${YELLOW}Caddy (SSL Automático):${NC}"
-    echo -e "  Proxy: $PORTAINER_DOMAIN -> portainer:9000"
-    echo ""
     echo -e "${YELLOW}Portainer:${NC}"
-    echo -e "  URL: https://$PORTAINER_DOMAIN"
+    echo -e "  URL: http://localhost:9000"
     echo -e "  Login: admin"
     echo -e "  Senha: admin@2026"
     echo ""
