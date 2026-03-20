@@ -274,7 +274,7 @@ configure_proxy_host() {
     write_step "Configurando Proxy Host no NPM..." "INFO"
 
     local email="admin@example.com"
-    local password="admin@2026"
+    local password="changeme"
     local npm_api="http://localhost:81"
 
     while [ $attempt -le $max_attempts ]; do
@@ -636,7 +636,8 @@ install_all() {
     echo -e "${CYAN}========================================${NC}"
     echo -e "${GREEN}INSTALAÇÃO CONCLUÍDA!${NC}"
     echo -e "${CYAN}========================================${NC}"
-}
+    echo ""
+    read -p "Pressione ENTER para ver o menu..." 
 
 # ============================================
 # LOOP PRINCIPAL
