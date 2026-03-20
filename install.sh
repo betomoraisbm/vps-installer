@@ -639,7 +639,8 @@ install_all() {
     echo -e "${GREEN}INSTALAÇÃO CONCLUÍDA!${NC}"
     echo -e "${CYAN}========================================${NC}"
     echo ""
-    read -p "Pressione ENTER para ver o menu..." 
+    read -p "Pressione ENTER para ver o menu..."
+}
 
 # ============================================
 # LOOP PRINCIPAL
