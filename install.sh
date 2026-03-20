@@ -241,6 +241,12 @@ install_caddy() {
     write_step "Instalando Caddy..." "INFO"
     mkdir -p /opt/caddy
 
+    cat > /opt/caddy/Caddyfile << 'EOF'
+:80 {
+    respond "Caddy OK"
+}
+EOF
+
     docker run -d \
         --name caddy \
         --restart unless-stopped \
@@ -268,7 +274,7 @@ configure_domain_caddy() {
     write_step "Configurando $domain..." "INFO"
 
     cat > /opt/caddy/Caddyfile << EOF
-:80 {
+http://${domain} {
     reverse_proxy ${target_host}:${target_port}
 }
 EOF
@@ -569,7 +575,11 @@ install_all() {
     install_postgres
     install_redis
     install_minio
+    install_caddy
     install_portainer
+
+    sleep 3
+    configure_domain_caddy "$PORTAINER_DOMAIN" "portainer" "9000"
 
     echo ""
     echo -e "${CYAN}========================================${NC}"
@@ -593,8 +603,11 @@ install_all() {
     echo -e "  Usuário: $MINIO_USER"
     echo -e "  Senha: $MINIO_PASSWORD"
     echo ""
+    echo -e "${YELLOW}Caddy (Proxy Reverso):${NC}"
+    echo -e "  URL: http://$PORTAINER_DOMAIN"
+    echo ""
     echo -e "${YELLOW}Portainer:${NC}"
-    echo -e "  URL: http://localhost:9000"
+    echo -e "  URL: http://$PORTAINER_DOMAIN"
     echo -e "  Login: admin"
     echo -e "  Senha: admin@2026"
     echo ""
