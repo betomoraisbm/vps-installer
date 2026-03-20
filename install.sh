@@ -246,6 +246,8 @@ install_npm() {
         --name npm \
         --restart unless-stopped \
         --network "$NETWORK_NAME" \
+        -p 80:80 \
+        -p 443:443 \
         -p 81:81 \
         -p 444:444 \
         -v npm_data:/data \
