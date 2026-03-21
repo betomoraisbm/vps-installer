@@ -7,6 +7,7 @@ POSTGRES_PASSWORD="admin@2026"
 REDIS_PASSWORD="admin@2026"
 MINIO_USER="admin"
 MINIO_PASSWORD="admin@2026"
+EVOLUTION_API_KEY="evolucao_v2_$(openssl rand -hex 16 2>/dev/null || echo $(date +%s%N))"
 NETWORK_NAME="docker_admin"
 COMPOSE_PROJECT_NAME="vps"
 
@@ -65,7 +66,7 @@ show_menu() {
     echo -e "7 - Instalar Portainer"
     echo -e "8 - Instalar Typebot"
     echo -e "9 - Instalar N8N"
-    echo -e "10 - Instalar Evolution API"
+    echo -e "10 - Instalar Evolution V2"
     echo -e "11 - Instalar Wuzapi"
     echo -e "12 - Instalar OpenClaw"
     echo -e "13 - Ver Status"
@@ -273,7 +274,7 @@ configure_domain_caddy() {
 
     write_step "Configurando $domain..." "INFO"
 
-    cat > /opt/caddy/Caddyfile << EOF
+    cat >> /opt/caddy/Caddyfile << EOF
 http://${domain} {
     reverse_proxy ${target_host}:${target_port}
 }
@@ -417,45 +418,78 @@ install_n8n() {
 }
 
 # ============================================
-# INSTALAR EVOLUTION API
+# INSTALAR EVOLUTION V2
 # ============================================
-install_evolution() {
+install_evolution_v2() {
     show_banner
-    echo -e "${CYAN}[EVOLUTION API]${NC}"
+    echo -e "${CYAN}[EVOLUTION V2]${NC}"
     echo -e "========================================"
     echo ""
 
-    if docker ps -a --format '{{.Names}}' | grep -q "^evolution$"; then
-        write_step "Evolution API já existe!" "SKIP"
+    if docker ps -a --format '{{.Names}}' | grep -q "^evolution_v2$"; then
+        write_step "Evolution V2 já existe!" "SKIP"
         return
     fi
 
     create_network
 
     if [ -z "$EVOLUTION_DOMAIN" ]; then
-        echo -e "Digite o domínio para o Evolution API (ex: api.seudominio.com):"
+        echo -e "Digite o domínio para o Evolution V2 (ex: evo.seudominio.com):"
         read -p "Domínio: " EVOLUTION_DOMAIN
     fi
 
-    write_step "Criando volume para Evolution..." "INFO"
-    docker volume create evolution_data &>/dev/null || true
+    write_step "Criando bucket no MinIO..." "INFO"
+    docker exec minio mc mb minio/evolution --force 2>/dev/null || true
+    docker exec minio mc anonymous set download minio/evolution 2>/dev/null || true
 
-    write_step "Instalando Evolution API..." "INFO"
+    write_step "Criando volume para Evolution V2..." "INFO"
+    docker volume create evolution_v2_data &>/dev/null || true
+
+    write_step "Instalando Evolution V2..." "INFO"
     docker run -d \
-        --name evolution \
+        --name evolution_v2 \
         --restart unless-stopped \
         --network "$NETWORK_NAME" \
-        -p 8080:8080 \
-        -v evolution_data:/evolution/instances \
-        atendai/evolution-api:latest
+        -p 8081:8080 \
+        -e AUTHENTICATION_API_KEY="$EVOLUTION_API_KEY" \
+        -e AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES="true" \
+        -e CACHE_LOCAL_ENABLED="false" \
+        -e CACHE_REDIS_ENABLED="true" \
+        -e CACHE_REDIS_PREFIX_KEY="evolution_v2" \
+        -e CACHE_REDIS_SAVE_INSTANCES="false" \
+        -e CACHE_REDIS_URI="redis://:$REDIS_PASSWORD@redis:6379/1" \
+        -e DATABASE_ENABLED="true" \
+        -e DATABASE_PROVIDER="postgresql" \
+        -e DATABASE_CONNECTION_CLIENT_NAME="evolution_v2" \
+        -e DATABASE_CONNECTION_URI="postgresql://postgres:$POSTGRES_PASSWORD@postgres:5432/evolution" \
+        -e S3_ENABLED="true" \
+        -e S3_BUCKET="evolution" \
+        -e S3_ACCESS_KEY="$MINIO_USER" \
+        -e S3_SECRET_KEY="$MINIO_PASSWORD" \
+        -e S3_ENDPOINT="minio" \
+        -e S3_PORT="9000" \
+        -e S3_USE_SSL="false" \
+        -e LANGUAGE="pt-br" \
+        -e QRCODE_COLOR="#175197" \
+        -e QRCODE_LIMIT="30" \
+        -e LOG_BAILEYS="error" \
+        -e LOG_LEVEL="ERROR" \
+        -e SERVER_URL="http://$EVOLUTION_DOMAIN" \
+        -e TELEMETRY="false" \
+        -e WEBSOCKET_ENABLED="true" \
+        -v evolution_v2_data:/evolution/instances \
+        evoapicloud/evolution-api:v2.3.7
 
     sleep 5
 
-    configure_domain_caddy "$EVOLUTION_DOMAIN" "evolution" "8080"
+    docker network connect "$NETWORK_NAME" evolution_v2 2>/dev/null || true
 
-    write_step "Evolution API instalado!" "OK"
-    echo "  URL: https://$EVOLUTION_DOMAIN"
-    echo "  Database: postgresql://postgres:$POSTGRES_PASSWORD@postgres:5432/app"
+    configure_domain_caddy "$EVOLUTION_DOMAIN" "evolution_v2" "8080"
+
+    write_step "Evolution V2 instalado!" "OK"
+    echo "  URL: http://$EVOLUTION_DOMAIN"
+    echo "  API Key: $EVOLUTION_API_KEY"
+    echo "  Database: postgresql://postgres:$POSTGRES_PASSWORD@postgres:5432/evolution"
 }
 
 # ============================================
@@ -636,7 +670,7 @@ while true; do
         7) install_portainer ;;
         8) install_typebot ;;
         9) install_n8n ;;
-        10) install_evolution ;;
+        10) install_evolution_v2 ;;
         11) install_wuzapi ;;
         12) install_openclaw ;;
         13) show_status ;;
