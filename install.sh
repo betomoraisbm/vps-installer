@@ -524,12 +524,27 @@ install_typebot() {
         read -p "Domínio: " TYPEBOT_DOMAIN
     fi
 
+    echo -e "Escolha a versão do Typebot:"
+    echo -e "  1) latest"
+    echo -e "  2) 2.20.0"
+    echo -e "  3) 2.21.0"
+    echo -e "  4) 2.22.0"
+    echo -e "  5) 2.23.0"
+    read -p "Versão [1]: " TYPEBOT_VERSION_CHOICE
+    case $TYPEBOT_VERSION_CHOICE in
+        2) TYPEBOT_VERSION="2.20.0" ;;
+        3) TYPEBOT_VERSION="2.21.0" ;;
+        4) TYPEBOT_VERSION="2.22.0" ;;
+        5) TYPEBOT_VERSION="2.23.0" ;;
+        *) TYPEBOT_VERSION="latest" ;;
+    esac
+
     check_dns "$TYPEBOT_DOMAIN" || write_step "Continuando mesmo assim..." "WARN"
 
     write_step "Criando volume para Typebot..." "INFO"
     docker volume create typebot_data &>/dev/null || true
 
-    write_step "Instalando Typebot..." "INFO"
+    write_step "Instalando Typebot $TYPEBOT_VERSION..." "INFO"
     docker run -d \
         --name typebot \
         --restart unless-stopped \
@@ -539,7 +554,7 @@ install_typebot() {
         -e DATABASE_URL="postgresql://postgres:$POSTGRES_PASSWORD@postgres:5432/app" \
         -e NEXTAUTH_URL="https://$TYPEBOT_DOMAIN" \
         -e NEXT_PUBLIC_URL="https://$TYPEBOT_DOMAIN" \
-        typebot/typebot/latest
+        typebot/typebot:$TYPEBOT_VERSION
 
     sleep 5
 
@@ -573,12 +588,27 @@ install_n8n() {
         read -p "Domínio: " N8N_DOMAIN
     fi
 
+    echo -e "Escolha a versão do N8N:"
+    echo -e "  1) latest"
+    echo -e "  2) 1.65.0"
+    echo -e "  3) 1.70.0"
+    echo -e "  4) 1.75.0"
+    echo -e "  5) 1.80.0"
+    read -p "Versão [1]: " N8N_VERSION_CHOICE
+    case $N8N_VERSION_CHOICE in
+        2) N8N_VERSION="1.65.0" ;;
+        3) N8N_VERSION="1.70.0" ;;
+        4) N8N_VERSION="1.75.0" ;;
+        5) N8N_VERSION="1.80.0" ;;
+        *) N8N_VERSION="latest" ;;
+    esac
+
     check_dns "$N8N_DOMAIN" || write_step "Continuando mesmo assim..." "WARN"
 
     write_step "Criando volume para N8N..." "INFO"
     docker volume create n8n_data &>/dev/null || true
 
-    write_step "Instalando N8N..." "INFO"
+    write_step "Instalando N8N $N8N_VERSION..." "INFO"
     docker run -d \
         --name n8n \
         --restart unless-stopped \
@@ -592,7 +622,7 @@ install_n8n() {
         -e DB_POSTGRESDB_DATABASE="app" \
         -e DB_POSTGRESDB_USER="postgres" \
         -e DB_POSTGRESDB_PASSWORD="$POSTGRES_PASSWORD" \
-        n8nio/n8n:latest
+        n8nio/n8n:$N8N_VERSION
 
     sleep 5
 
@@ -650,7 +680,20 @@ install_evolution_v2() {
     write_step "Criando volume para Evolution V2..." "INFO"
     docker volume create evolution_v2_data &>/dev/null || true
 
-    write_step "Instalando Evolution V2..." "INFO"
+    echo -e "Escolha a versão do Evolution V2:"
+    echo -e "  1) v2.3.7 (recommended)"
+    echo -e "  2) v2.4.0"
+    echo -e "  3) v2.5.0"
+    echo -e "  4) v2.6.0"
+    read -p "Versão [1]: " EVOLUTION_VERSION_CHOICE
+    case $EVOLUTION_VERSION_CHOICE in
+        2) EVOLUTION_VERSION="v2.4.0" ;;
+        3) EVOLUTION_VERSION="v2.5.0" ;;
+        4) EVOLUTION_VERSION="v2.6.0" ;;
+        *) EVOLUTION_VERSION="v2.3.7" ;;
+    esac
+
+    write_step "Instalando Evolution V2 $EVOLUTION_VERSION..." "INFO"
     docker run -d \
         --name evolution_v2 \
         --restart unless-stopped \
@@ -683,7 +726,7 @@ install_evolution_v2() {
         -e TELEMETRY="false" \
         -e WEBSOCKET_ENABLED="true" \
         -v evolution_v2_data:/evolution/instances \
-        evoapicloud/evolution-api:v2.3.7
+        evoapicloud/evolution-api:$EVOLUTION_VERSION
 
     sleep 10
 
@@ -722,12 +765,27 @@ install_wuzapi() {
         read -p "Domínio: " WUZAPI_DOMAIN
     fi
 
+    echo -e "Escolha a versão do Wuzapi:"
+    echo -e "  1) latest"
+    echo -e "  2) 2.5.0"
+    echo -e "  3) 2.6.0"
+    echo -e "  4) 2.7.0"
+    echo -e "  5) 2.8.0"
+    read -p "Versão [1]: " WUZAPI_VERSION_CHOICE
+    case $WUZAPI_VERSION_CHOICE in
+        2) WUZAPI_VERSION="2.5.0" ;;
+        3) WUZAPI_VERSION="2.6.0" ;;
+        4) WUZAPI_VERSION="2.7.0" ;;
+        5) WUZAPI_VERSION="2.8.0" ;;
+        *) WUZAPI_VERSION="latest" ;;
+    esac
+
     check_dns "$WUZAPI_DOMAIN" || write_step "Continuando mesmo assim..." "WARN"
 
     write_step "Criando volume para Wuzapi..." "INFO"
     docker volume create wuzapi_data &>/dev/null || true
 
-    write_step "Instalando Wuzapi..." "INFO"
+    write_step "Instalando Wuzapi $WUZAPI_VERSION..." "INFO"
     docker run -d \
         --name wuzapi \
         --restart unless-stopped \
@@ -736,7 +794,7 @@ install_wuzapi() {
         -v wuzapi_data:/app/data \
         -e DATABASE_URL="postgresql://postgres:$POSTGRES_PASSWORD@postgres:5432/app" \
         -e REDIS_URL="redis://:$REDIS_PASSWORD@redis:6379" \
-        wuzapi/wuzapi:latest
+        wuzapi/wuzapi:$WUZAPI_VERSION
 
     sleep 5
 
