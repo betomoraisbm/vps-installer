@@ -580,18 +580,50 @@ EOF
 # ============================================
 # INSTALAR PORTAINER
 # ============================================
+wait_for_portainer() {
+    local max_attempts=30
+    local attempt=1
+    local delay=10
+
+    write_step "Aguardando Portainer ficar online..." "INFO"
+
+    while [ $attempt -le $max_attempts ]; do
+        if docker ps --format '{{.Names}}' | grep -q "^portainer$"; then
+            if curl -sf "http://localhost:9000/api/system/status" > /dev/null 2>&1; then
+                write_step "Portainer está respondendo na API!" "OK"
+                return 0
+            fi
+            write_step "Portainer rodando, aguardando API... (tentativa $attempt/$max_attempts)" "INFO"
+        else
+            write_step "Portainer não está rodando ainda... (tentativa $attempt/$max_attempts)" "WARN"
+        fi
+        sleep $delay
+        attempt=$((attempt + 1))
+    done
+
+    write_step "Tempo esgotado aguardando Portainer!" "ERROR"
+    return 1
+}
+
 install_portainer() {
     show_banner
     echo -e "${CYAN}[PORTAINER]${NC}"
     echo -e "========================================"
     echo ""
 
-    if docker ps -a --format '{{.Names}}' | grep -q "^portainer$"; then
-        write_step "Portainer já existe!" "SKIP"
-        return
-    fi
-
     create_network
+
+    if docker ps -a --format '{{.Names}}' | grep -q "^portainer$"; then
+        local portainer_status=$(docker ps -a --format '{{.Names}}:{{.Status}}' | grep "^portainer:" | cut -d: -f2)
+        if docker ps --format '{{.Names}}' | grep -q "^portainer$"; then
+            write_step "Portainer já está rodando!" "SKIP"
+            return
+        else
+            write_step "Removendo Portainer em estado: $portainer_status" "INFO"
+            docker rm -f portainer 2>/dev/null || true
+            docker volume rm portainer_data 2>/dev/null || true
+        fi
+    fi
 
     write_step "Criando volume para Portainer..." "INFO"
     docker volume create portainer_data &>/dev/null || true
@@ -607,13 +639,12 @@ install_portainer() {
         -v portainer_data:/data \
         portainer/portainer-ce:latest
 
-    sleep 5
-
-    if docker ps | grep -q "^portainer$"; then
-        write_step "Portainer instalado!" "OK"
+    if wait_for_portainer; then
+        write_step "Portainer instalado com sucesso!" "OK"
     else
         cleanup_failed "portainer"
         write_step "Falha ao iniciar Portainer!" "ERROR"
+        return 1
     fi
 }
 
