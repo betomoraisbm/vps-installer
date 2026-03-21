@@ -1,6 +1,35 @@
 #!/bin/bash
 
 # ============================================
+# TRATAMENTO DE ERROS
+# ============================================
+set -euo pipefail
+EXIT_CODE=0
+FAILED_STEP=""
+
+error_handler() {
+    local line=$1
+    local exit_code=$2
+    echo ""
+    echo -e "${RED}========================================${NC}"
+    echo -e "${RED}   ERRO NA INSTALAÇÃO${NC}"
+    echo -e "${RED}========================================${NC}"
+    echo ""
+    echo -e "${RED}Passo que falhou: $FAILED_STEP${NC}"
+    echo -e "${RED}Linha: $line${NC}"
+    echo -e "${RED}Código de saída: $exit_code${NC}"
+    echo ""
+    echo -e "${YELLOW}Para diagnosticar, execute:${NC}"
+    echo -e "  docker ps -a"
+    echo -e "  docker logs <container>"
+    echo -e "  cat $LOG_FILE"
+    echo ""
+    exit 1
+}
+
+trap 'error_handler $LINENO $?' ERR
+
+# ============================================
 # VARIÁVEIS GLOBAIS
 # ============================================
 POSTGRES_PASSWORD="admin@2026"
@@ -12,6 +41,8 @@ NETWORK_NAME="docker_admin"
 COMPOSE_PROJECT_NAME="vps"
 LOG_FILE="/var/log/vps-installer.log"
 CADDYFILE="/opt/caddy/Caddyfile"
+MAX_RETRIES=3
+RETRY_DELAY=5
 
 # ============================================
 # CORES
@@ -73,10 +104,71 @@ check_error() {
     return 0
 }
 
+retry() {
+    local n=1
+    local max=$MAX_RETRIES
+    local delay=$RETRY_DELAY
+    local cmd="$@"
+
+    while [ $n -le $max ]; do
+        write_step "Tentativa $n de $max: $cmd" "INFO"
+        if eval "$cmd"; then
+            return 0
+        fi
+        write_step "Falhou, tentando novamente em ${delay}s..." "WARN"
+        sleep $delay
+        n=$((n + 1))
+    done
+    return 1
+}
+
+wait_for_service() {
+    local container=$1
+    local port=$2
+    local timeout=${3:-30}
+    local count=0
+
+    write_step "Aguardando $container na porta $port..." "INFO"
+    while [ $count -lt $timeout ]; do
+        if docker exec "$container" curl -sf "http://localhost:$port" > /dev/null 2>&1; then
+            return 0
+        fi
+        sleep 1
+        count=$((count + 1))
+    done
+    return 1
+}
+
+wait_for_container() {
+    local container=$1
+    local timeout=${2:-60}
+    local count=0
+
+    write_step "Aguardando container $container iniciar..." "INFO"
+    while [ $count -lt $timeout ]; do
+        if docker ps --format '{{.Names}}' | grep -q "^${container}$"; then
+            sleep 2
+            return 0
+        fi
+        sleep 2
+        count=$((count + 2))
+    done
+    return 1
+}
+
+check_container_status() {
+    local container=$1
+    if ! docker ps --format '{{.Names}}' | grep -q "^${container}$"; then
+        FAILED_STEP="$container não está a funcionar"
+        return 1
+    fi
+    return 0
+}
+
 create_network() {
     if ! docker network ls | grep -q "$NETWORK_NAME"; then
         write_step "Criando rede $NETWORK_NAME..." "INFO"
-        docker network create "$NETWORK_NAME" 2>/dev/null || true
+        docker network create "$NETWORK_NAME"
     fi
 }
 
@@ -234,6 +326,7 @@ uninstall_all() {
 # INSTALAR DOCKER
 # ============================================
 install_docker() {
+    FAILED_STEP="Instalar Docker"
     show_banner
     echo -e "${CYAN}[DOCKER]${NC}"
     echo -e "========================================"
@@ -261,9 +354,17 @@ install_docker() {
     apt-get update -qq
     apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-    if check_error "Falha ao instalar Docker"; then
-        systemctl enable docker 2>/dev/null || true
-        write_step "Docker instalado: $(docker --version)" "OK"
+    write_step "Ativando e iniciando Docker..." "INFO"
+    systemctl enable docker
+    systemctl start docker
+
+    sleep 3
+
+    if docker ps &>/dev/null; then
+        write_step "Docker instalado e a funcionar: $(docker --version)" "OK"
+    else
+        FAILED_STEP="Docker não conseguiu iniciar"
+        return 1
     fi
 }
 
@@ -391,14 +492,20 @@ install_minio() {
 # INSTALAR CADDY (PROXY REVERSO)
 # ============================================
 install_caddy() {
+    FAILED_STEP="Instalar Caddy"
     show_banner
     echo -e "${CYAN}[CADDY]${NC}"
     echo -e "========================================"
     echo ""
 
-    if docker ps -a --format '{{.Names}}' | grep -q "^caddy$"; then
-        write_step "Caddy já existe!" "SKIP"
+    if docker ps --format '{{.Names}}' | grep -q "^caddy$"; then
+        write_step "Caddy já está a funcionar!" "SKIP"
         return
+    fi
+
+    if docker ps -a --format '{{.Names}}' | grep -q "^caddy$"; then
+        write_step "Removendo Caddy incompleto..." "INFO"
+        docker rm caddy 2>/dev/null || true
     fi
 
     create_network
@@ -423,13 +530,20 @@ EOF
         -v /opt/caddy/data:/data \
         caddy:latest
 
-    sleep 5
+    if ! wait_for_container "caddy" 30; then
+        FAILED_STEP="Caddy não conseguiu iniciar em 30 segundos"
+        docker logs caddy | tail -20
+        return 1
+    fi
 
-    if docker ps | grep -q "^caddy$"; then
-        write_step "Caddy instalado!" "OK"
+    sleep 2
+
+    if curl -sf http://localhost:80 | grep -q "Caddy OK"; then
+        write_step "Caddy instalado e a funcionar na porta 80!" "OK"
     else
-        cleanup_failed "caddy"
-        write_step "Falha ao iniciar Caddy!" "ERROR"
+        FAILED_STEP="Caddy não está a responder na porta 80"
+        docker logs caddy | tail -20
+        return 1
     fi
 }
 
@@ -893,6 +1007,7 @@ show_logs() {
 # INSTALAÇÃO COMPLETA
 # ============================================
 install_all() {
+    FAILED_STEP="Instalação Completa"
     show_banner
     echo -e "${CYAN}[INSTALAÇÃO COMPLETA]${NC}"
     echo -e "========================================"
@@ -904,15 +1019,70 @@ install_all() {
     read -p "Domínio: " PORTAINER_DOMAIN
     echo ""
 
+    echo -e "${CYAN}[1/6] Instalando Docker...${NC}"
     install_docker
+
+    echo -e "${CYAN}[2/6] Instalando PostgreSQL...${NC}"
     install_postgres
+
+    echo -e "${CYAN}[3/6] Instalando Redis...${NC}"
     install_redis
+
+    echo -e "${CYAN}[4/6] Instalando MinIO...${NC}"
     install_minio
+
+    echo -e "${CYAN}[5/6] Instalando Caddy...${NC}"
     install_caddy
+
+    echo -e "${CYAN}[6/6] Instalando Portainer...${NC}"
     install_portainer
 
-    sleep 3
     configure_domain_caddy "$PORTAINER_DOMAIN" "portainer" "9000"
+
+    sleep 3
+
+    echo ""
+    echo -e "${CYAN}========================================${NC}"
+    echo -e "${CYAN}   VERIFICANDO INSTALAÇÃO${NC}"
+    echo -e "${CYAN}========================================${NC}"
+    echo ""
+
+    local all_ok=true
+
+    if docker ps --format '{{.Names}}' | grep -q "^caddy$"; then
+        echo -e "${GREEN}[OK]${NC} Caddy"
+    else
+        echo -e "${RED}[FALHOU]${NC} Caddy - crítico!"
+        all_ok=false
+    fi
+
+    if docker ps --format '{{.Names}}' | grep -q "^portainer$"; then
+        echo -e "${GREEN}[OK]${NC} Portainer"
+    else
+        echo -e "${RED}[FALHOU]${NC} Portainer"
+        all_ok=false
+    fi
+
+    if curl -sf http://localhost:80 > /dev/null 2>&1; then
+        echo -e "${GREEN}[OK]${NC} Caddy a responder na porta 80"
+    else
+        echo -e "${RED}[FALHOU]${NC} Caddy não responde na porta 80"
+        all_ok=false
+    fi
+
+    if [ "$all_ok" = false ]; then
+        echo ""
+        echo -e "${RED}========================================${NC}"
+        echo -e "${RED}   ATENÇÃO: Problemas detectados!${NC}"
+        echo -e "${RED}========================================${NC}"
+        echo ""
+        echo -e "${YELLOW}Verifique os logs com:${NC}"
+        echo -e "  docker logs caddy"
+        echo -e "  docker logs portainer"
+        echo ""
+        FAILED_STEP="Verificação final falhou"
+        return 1
+    fi
 
     echo ""
     echo -e "${CYAN}========================================${NC}"
